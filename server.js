@@ -173,7 +173,7 @@ app.post("/api/exercise/new-user", function(req, res) {
 });
 
 /** Get Registerd Users **/
-app.get("/api/exercise/users/:", function(req, res) {
+app.get("/api/exercise/users", function(req, res) {
   User.find({}, function(err, data) {
     if (err) console.error(err);
     res.json(data);
