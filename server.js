@@ -165,7 +165,7 @@ app.post("/api/exercise/new-user", function(req, res) {
     if (found !== null && found !== undefined) {
       res.end("the username has already used");
     } else {
-      createAndSaveUser(name, get_hash(name)).then(user =>
+      createAndSaveUser(req.body.username, get_hash(req.body.username)).then(user =>
         res.json({ username: user.name, _id: user.hash })
       );
     }
@@ -179,7 +179,6 @@ app.get("/api/exercise/users/:", function(req, res) {
     res.json(data);
   });
 });
-
 /** Add exercises with UserID**/
 app.post("/api/exercise/add", function(req, res) {
   // req.body : { userId, description, duration, date }
@@ -240,7 +239,7 @@ app.post("/api/exercise/add", function(req, res) {
 //GET /api/exercise/log?{userId}[&from][&to][&limit]
 app.get("/api/exercise/log", function(req, res) {
   const hash = req.query.userId;
-  let limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
+  let limit;
   let query = { hash: hash };
   let ltgt = {};
   let to = req.query.to;
@@ -253,7 +252,7 @@ app.get("/api/exercise/log", function(req, res) {
 
   /** initialization **/
   const p = new Promise((resolve, reject) => {
-    if (isNaN(limit)) reject("invalid limit (e.g. '15' is valid)");
+    limit = isNaN(req.query.limit) ? undefined : parseInt(req.query.limit, 10);
     if (from) {
       if (!isValidDateFormat(from)) {
         reject("valid date format (valid : YYYY-MM-DDDD)");
