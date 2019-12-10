@@ -6,32 +6,11 @@ const bodyParser = require("body-parser");
 
 const cors = require("cors");
 
-/** date configuration**/
-const dateMin = "2019-12-01";
-const dateMax = "2024-11-30";
-function isValidDateFormat(date) {
-  return /\d\d\d\d-\d\d-\d\d/.test(date);
-}
-function isValidDateRange(date) {
-  let dateISO = new Date(date);
-  return dateISO <= new Date(dateMax) && dateISO >= new Date(dateMin);
-}
-
-/** use SHA1 **/
-var crypto = require("crypto");
-function get_hash(plaintext) {
-  var hashsum = crypto.createHash("sha1");
-  hashsum.update(plaintext);
-  return hashsum.digest("hex");
-}
-
 /** mongoose configuration**/
 require("dotenv").config();
 const mongoose = require("mongoose");
-mongoose.connect(process.env.MLAB_URI || "mongodb://localhost/exercise-track", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+const db_uri = process.env.MLAB_URI || "mongodb://localhost/exercise-track"
+mongoose.connect(db_uri, { useNewUrlParser: true, useUnifiedTopology: true });
 console.log(mongoose.connection.readyState);
 
 var Schema = mongoose.Schema;
@@ -56,23 +35,27 @@ var logSchema = new Schema({
 });
 const Log = mongoose.model("Log", logSchema);
 
-// var createUser = new User({ name: 'takashi', hash: get_hash("mydata") });
+// /**  create user sample **/
+// var createUser = new User({ name: 'takashi', hash: get_hash("takashi") });
 // createUser.save(function(err, data) {
 //   if (err) return console.error(err);
 //   console.log(data);
 // });
 
-/** sample log **/
+// /** create log sample **/
 // const createLog = new Log({
-//   hash: get_hash("my_data"),
+//   hash: get_hash("takashi"),
 //   description: "This is sample",
 //   duration: "30",
 //   date: "2019-12-06"
 // });
+
 //  createLog.save(function(err, data) {
 //   if (err) return console.error(err);
 //   console.log(data);
 // });
+
+// /** find log **/
 // Log.findOne({date: '2019-12-06'}, function(err, data) {
 //   if (err) console.error(err);
 //   console.log(data.date.toString());
@@ -81,7 +64,7 @@ const Log = mongoose.model("Log", logSchema);
 //console.log(sample.validateSync());
 
 /** Here is for a different solution (using different Model).   **/
-/** There are one Model(collection) which has a field : {log : [objects]}.  **/
+/** There are one Model(collection) which has a field : {log : [objects]}. **/
 /** Since this structure made me use "aggregate", but I didn't understand it
 so that I did alter solution in this project.**/
 // var createAndSave = function() {
@@ -113,6 +96,32 @@ app.get("/", (req, res) => {
 });
 
 /** my solution start **/
+
+/** date configuration**/
+function isValidDate(date_input) {
+  
+  const dateMin = "2019-12-01";
+  const dateMax = "2024-11-30";
+  const date = new Date(date_input);
+  
+  if ( !/\d\d\d\d-\d\d-\d\d/.test(date) ) {
+    return "valid date format (valid : YYYY-MM-DDDD)";
+  } else {
+    if ( date <= new Date(dateMax) && date >= new Date(dateMin) ) {
+      return "valid date range: [" + dateMin + ", " + dateMax + "] .";
+    } else {
+      return date;
+    }
+  }
+}
+
+/** use SHA1 **/
+var crypto = require("crypto");
+function get_hash(plaintext) {
+  var hashsum = crypto.createHash("sha1");
+  hashsum.update(plaintext);
+  return hashsum.digest("hex");
+}
 
 /** check if the url exists? **/
 var findUserByName = function(name) {
