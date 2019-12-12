@@ -23,6 +23,8 @@ var userSchema = new Schema({
 const User = mongoose.model("User", userSchema);
 
 /** logModel**/
+const dateMin = "2019-12-01";
+const dateMax = "2024-11-30";
 var logSchema = new Schema({
   hash: { type: String, required: true },
   description: String,
@@ -98,21 +100,22 @@ app.get("/", (req, res) => {
 /** my solution start **/
 
 /** date configuration**/
-function isValidDate(date_input) {
-  
-  const dateMin = "2019-12-01";
-  const dateMax = "2024-11-30";
-  const date = new Date(date_input);
-  
-  if ( !/\d\d\d\d-\d\d-\d\d/.test(date) ) {
-    return "valid date format (valid : YYYY-MM-DDDD)";
-  } else {
-    if ( date <= new Date(dateMax) && date >= new Date(dateMin) ) {
-      return "valid date range: [" + dateMin + ", " + dateMax + "] .";
-    } else {
-      return date;
+var isValidDate = function(date_input) {
+  return new Promise ((resolve, reject) => {
+
+    if ( !/\d\d\d\d-\d\d-\d\d/.test(date_input) ) {
+      reject(new Error("valid date format (valid : YYYY-MM-DDDD)"));
     }
-  }
+
+    const date = new Date(date_input);
+    if ( date >= new Date(dateMax) || date <= new Date(dateMin) ) {
+      console.log(date,new Date(dateMax), new Date(dateMin));
+      reject(new Error("valid date range: ["
+  		       + dateMin + ", "+ dateMax + "] ."));
+    } else {
+      resolve(date);
+    }
+  });
 }
 
 /** use SHA1 **/
@@ -188,6 +191,7 @@ app.get("/api/exercise/users", function(req, res) {
     res.json(data);
   });
 });
+
 /** Add exercises with UserID**/
 app.post("/api/exercise/add", function(req, res) {
   // req.body : { userId, description, duration, date }
@@ -196,134 +200,132 @@ app.post("/api/exercise/add", function(req, res) {
   let duration = Number(req.body.duration);
   let date;
   let hash = req.body.userId;
-
-  /** initialization **/
-  const p = new Promise((resolve, reject) => {
-    if (isNaN(duration)) reject("invalid duration (e.g. '15' is valid)");
-    if (!req.body.date) {
-      date = new Date();
-    } else if (!isValidDateFormat(req.body.date)) {
-      reject("invalid date (correct: YYYY-MM-DD)");
-    } else {
-      if (!isValidDateRange) {
-        reject("valid date range (from:" + dateMin + ", to: " + dateMax + ")");
+  let res_json = {};   // for output
+  
+  /** initialization : duration, date **/
+  Promise.resolve()
+    .then( () => {
+      if (isNaN(duration)) throw new Error("invalid duration" +
+  					    " (e.g. '15' is valid)");
+      if (!req.body.date) {
+  	return date = new Date();
       } else {
-        date = new Date(req.body.date);
+  	// if error occured in isVAlidDate(), reject promise will be returned.
+  	// else return promise of resolve(new Date(req.body.date)).
+  	return isValidDate(req.body.date)
+	  .then( result => date = result)
       }
-    }
-    // waiting : if not waiting, promise is being pending.
-    setTimeout(function() {
-      resolve();
-    }, 1);
+    })
+    /** find, create and save log(exercise) **/
+    .then( () => User.findOne( {hash: hash} ))
+    .then( found => {
+        if (found === null || found === undefined) {
+          throw new Error("unknown _id");
+        } else {
+      	  res_json._id = found.hash;
+      	  res_json.username = found.name;
+      	  // return promise
+          return createAndSaveLog(hash, description, duration, date);
+        }
+    })
+  /** output **/
+    .then( data => {
+      return res.json({
+	...res_json,
+	description: data.description,
+	duration: data.duration,
+	date: data.date.toString().slice(0, 15)
+      });
+    })
+  /** error handling **/
+    .catch( err => {
+      console.error('aaa',err,'aaaa');
+      return res.end(err.name + ': ' + err.message);
   });
 
-  /** find, create and save log(exercise), then output**/
-  p.then(
-    () => {
-      // resolve
-      User.findOne({ hash: hash }, (err, found) => {
-        if (err) return console.error(err);
-        if (found === null || found === undefined) {
-          res.end("unknown _id");
-        } else {
-          createAndSaveLog(hash, description, duration, date).then(data => {
-            res.json({
-              _id: found.hash,
-              username: found.name,
-              description: data.description,
-              duration: data.duration,
-              date: data.date.toString().slice(0, 15)
-            });
-          });
-        }
-      });
-    },
-    // reject
-    reason => res.end(reason)
-  );
 });
 
 /** Get Registerd Logs With Optional Conditions (from, to, limit)**/
 ///api/exercise/log?&userId=28229485665f96e033333c22c3bdb508daefca17
 //GET /api/exercise/log?{userId}[&from][&to][&limit]
-app.get("/api/exercise/log", function(req, res) {
-  const hash = req.query.userId;
-  let limit;
-  let query = { hash: hash };
-  let ltgt = {};
-  let to = req.query.to;
-  let from = req.query.from;
-  // query example :
-  //   { hash: hash, date: { $lt: date, $gt: date } }
-  //   { hash: hash, date: {
-  //                  '$lte': new Date("2019-12-10"),
-  //                  '$gte': new Date("2019-12-5") } }
+// app.get("/api/exercise/log", function(req, res) {
+//   const hash = req.query.userId;
+//   let limit;
+//   let query = { hash: hash };
+//   let ltgt = {};
+//   let to = req.query.to;
+//   let from = req.query.from;
+//   // query example :
+//   //   { hash: hash, date: { $lt: date, $gt: date } }
+//   //   { hash: hash, date: {
+//   //                  '$lte': new Date("2019-12-10"),
+//   //                  '$gte': new Date("2019-12-5") } }
 
-  /** initialization **/
-  const p = new Promise((resolve, reject) => {
-    limit = isNaN(req.query.limit) ? undefined : parseInt(req.query.limit, 10);
-    if (from) {
-      if (!isValidDateFormat(from)) {
-        reject("valid date format (valid : YYYY-MM-DDDD)");
-      } else {
-        if (!isValidDateRange(from)) {
-          reject("valid date range (from :" + dateMin + ")");
-        } else {
-          ltgt.$gte = new Date(from);
-        }
-      }
-    }
-    if (to) {
-      if (!isValidDateFormat(to)) {
-        reject("valid date format (valid : YYYY-MM-DDDD)");
-      } else {
-        if (!isValidDateRange(to)) {
-          reject("valid date range (to :" + dateMax + ")");
-        } else {
-          ltgt.$lte = new Date(to);
-        }
-      }
-    }
+//   /** initialization **/
+//   const p = new Promise((resolve, reject) => {
+//     limit = isNaN(req.query.limit) ? undefined : parseInt(req.query.limit, 10);
+//     if (from) {
+//       if (!isValidDateFormat(from)) {
+//         reject("valid date format (valid : YYYY-MM-DDDD)");
+//       } else {
+//         if (!isValidDateRange(from)) {
+//           reject("valid date range (from :" + dateMin + ")");
+//         } else {
+//           ltgt.$gte = new Date(from);
+//         }
+//       }
+//     }
+//     if (to) {
+//       if (!isValidDateFormat(to)) {
+//         reject("valid date format (valid : YYYY-MM-DDDD)");
+//       } else {
+//         if (!isValidDateRange(to)) {
+//           reject("valid date range (to :" + dateMax + ")");
+//         } else {
+//           ltgt.$lte = new Date(to);
+//         }
+//       }
+//     }
 
-    // if(Object.keys(ltgt).length )
-    if (ltgt.$lte || ltgt.$gte) {
-      query.date = ltgt;
-    }
-    // waiting
-    setTimeout(function() {
-      resolve();
-    }, 1);
-  });
+//     // if(Object.keys(ltgt).length )
+//     if (ltgt.$lte || ltgt.$gte) {
+//       query.date = ltgt;
+//     }
+//     // waiting
+//     setTimeout(function() {
+//       resolve();
+//     }, 1);
+//   });
 
-  /** find with optional conditions (from, to, limit) **/
-  p.then(
-    // resolve
-    () => {
-      User.findOne({ hash: hash }, function(err, found) {
-        if (err) return console.error(err);
-        if (found === null || found === undefined) {
-          res.end("unknown id");
-        } else {
-          Log.find(query)
-            .limit(limit)
-            .exec((err, data) => {
-              if (err) console.error(err);
-              res.json({
-                username: found.name,
-                _id: found.hash,
-                from: from,
-                to: to,
-                limit: limit,
-                log: data
-              });
-            });
-        }
-      });
-    },
-    // reject
-    reason => res.end(reason)
-  );
-});
+//   /** find with optional conditions (from, to, limit) **/
+//   p.then(
+//     // resolve
+//     () => {
+//       User.findOne({ hash: hash }, function(err, found) {
+//         if (err) return console.error(err);
+//         if (found === null || found === undefined) {
+//           res.end("unknown id");
+//         } else {
+//           Log.find(query)
+//             .limit(limit)
+//             .exec((err, data) => {
+//               if (err) console.error(err);
+//               res.json({
+//                 username: found.name,
+//                 _id: found.hash,
+//                 from: from,
+//                 to: to,
+//                 limit: limit,
+//                 log: data
+//               });
+//             });
+//         }
+//       });
+//     },
+//     // reject
+//     reason => res.end(reason)
+//   );
+// });
 
 /** my solution end**/
 
