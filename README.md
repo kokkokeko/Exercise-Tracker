@@ -3,20 +3,20 @@
 #### A microservice project, part of Free Code Camp's curriculum
 
 ### ユーザーストーリー
-1. userを作成
-POST [project_url]/api/exercise/new-user
-input : username
+1. userを作成<br>
+POST [project_url]/api/exercise/new-user<br>
+input : username<br>
 output : JSON {_id: ?, username: ?}
-2. 全てのユーザを表示
+2. 全てのユーザを表示<br>
 GET /api/exercise/users
-3. Exercise(Log)を作成
-POST /api/exercise/add
-input ：userId(_id), description, duration,（任意で)date
+3. Exercise(Log)を作成<br>
+POST /api/exercise/add<br>
+input ：userId(_id), description, duration,（任意で)date<br>
 output : JSON {_id: ?, username: ?, description: ?, duration: ?, date: ?}
-4. yourIdが登録した全てのExercise(Log)を表示
+4. yourIdが登録した全てのExercise(Log)を表示<br>
 GET /api/exercise/log?userId=yourId
-5. from, to, limitでその条件にあったLogを表示
-GET /api/exercise/log?userId=yourId&limit=3&to=2019-12-11
+5. from, to, limitでその条件にあったLogを表示<br>
+GET /api/exercise/log?userId=yourId&limit=3&to=2019-12-11<br>
 (Date format yyyy-mm-dd, limit = int)
 
 ## Configuration
