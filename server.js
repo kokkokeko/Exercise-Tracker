@@ -239,7 +239,7 @@ app.post("/api/exercise/add", function(req, res) {
     })
   /** error handling **/
     .catch( err => {
-      console.error('aaa',err,'aaaa');
+      console.error(err);
       return res.end(err.name + ': ' + err.message);
   });
 
@@ -248,84 +248,63 @@ app.post("/api/exercise/add", function(req, res) {
 /** Get Registerd Logs With Optional Conditions (from, to, limit)**/
 ///api/exercise/log?&userId=28229485665f96e033333c22c3bdb508daefca17
 //GET /api/exercise/log?{userId}[&from][&to][&limit]
-// app.get("/api/exercise/log", function(req, res) {
-//   const hash = req.query.userId;
-//   let limit;
-//   let query = { hash: hash };
-//   let ltgt = {};
-//   let to = req.query.to;
-//   let from = req.query.from;
-//   // query example :
-//   //   { hash: hash, date: { $lt: date, $gt: date } }
-//   //   { hash: hash, date: {
-//   //                  '$lte': new Date("2019-12-10"),
-//   //                  '$gte': new Date("2019-12-5") } }
-
-//   /** initialization **/
-//   const p = new Promise((resolve, reject) => {
-//     limit = isNaN(req.query.limit) ? undefined : parseInt(req.query.limit, 10);
-//     if (from) {
-//       if (!isValidDateFormat(from)) {
-//         reject("valid date format (valid : YYYY-MM-DDDD)");
-//       } else {
-//         if (!isValidDateRange(from)) {
-//           reject("valid date range (from :" + dateMin + ")");
-//         } else {
-//           ltgt.$gte = new Date(from);
-//         }
-//       }
-//     }
-//     if (to) {
-//       if (!isValidDateFormat(to)) {
-//         reject("valid date format (valid : YYYY-MM-DDDD)");
-//       } else {
-//         if (!isValidDateRange(to)) {
-//           reject("valid date range (to :" + dateMax + ")");
-//         } else {
-//           ltgt.$lte = new Date(to);
-//         }
-//       }
-//     }
-
-//     // if(Object.keys(ltgt).length )
-//     if (ltgt.$lte || ltgt.$gte) {
-//       query.date = ltgt;
-//     }
-//     // waiting
-//     setTimeout(function() {
-//       resolve();
-//     }, 1);
-//   });
-
-//   /** find with optional conditions (from, to, limit) **/
-//   p.then(
-//     // resolve
-//     () => {
-//       User.findOne({ hash: hash }, function(err, found) {
-//         if (err) return console.error(err);
-//         if (found === null || found === undefined) {
-//           res.end("unknown id");
-//         } else {
-//           Log.find(query)
-//             .limit(limit)
-//             .exec((err, data) => {
-//               if (err) console.error(err);
-//               res.json({
-//                 username: found.name,
-//                 _id: found.hash,
-//                 from: from,
-//                 to: to,
-//                 limit: limit,
-//                 log: data
-//               });
-//             });
-//         }
-//       });
-//     },
-//     // reject
-//     reason => res.end(reason)
-//   );
-// });
+app.get("/api/exercise/log", function(req, res) {
+  const hash = req.query.userId;
+  let limit = isNaN(req.query.limit) ? undefined : parseInt(req.query.limit, 10);
+  // query for 'Log.find()'
+  let query = { hash: hash };
+  // date validation for query : less than(to), grater than(from)
+  let ltgt = {};
+  let to = req.query.to;
+  let from = req.query.from;
+  // query example :
+  //   { hash: hash, date: { $lt: date, $gt: date } }
+  //   { hash: hash, date: {
+  //                  '$lte': new Date("2019-12-10"),
+  //                  '$gte': new Date("2019-12-5") } }
+  let res_json = {}; // for output
+  
+  /** initialization : query **/
+  Promise.resolve()
+    .then( () => {
+      let promises = [];
+      if (from)  {
+	promises.push(isValidDate(from).then( result => ltgt.$gte = result ));
+      }
+      if (to) {
+	promises.push(isValidDate(to).then( result => ltgt.$lte = result ));
+      }
+      if (promises.length){
+	return Promise.all(promises).then( () => query.date = ltgt );
+      }
+    })
+  /** find User **/
+    .then( () => User.findOne( { hash: hash } ) )
+    .then( found => {
+      if (found === null || found === undefined) {
+        throw new Error("unknown id");
+      }
+      res_json.username = found.name;
+      res_json._id = found.hash;
+    })
+  /** find Log with optional conditions (from, to, limit) **/
+    .then( () => Log.find(query).limit(limit).exec() )
+  /** output **/
+    .then( data => {
+      res.json({
+	...res_json,
+        from: from,
+        to: to,
+        limit: limit,
+        log: data
+      });
+    })
+  /** Error Handling **/
+    .catch( err => {
+      console.error(err);
+      res.end(err.toString());
+    });
+});
 
 /** my solution end**/
 
