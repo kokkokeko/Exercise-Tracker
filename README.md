@@ -2,6 +2,19 @@
 
 #### A microservice project, part of Free Code Camp's curriculum
 
+### ユーザーストーリー
+1. フォームにユーザネームを入力すると POST [project_url]/api/exercise/new-user を通してuserを作成します。JSON形式で{_id: ?, username: ?}を表示します。
+2. GET [project_url]/api/exercise/usersで全てのユーザをJSON形式で表示します。
+3.　フォームにuserId(_id), description, duration,（任意で)dateを入力すると POST /api/exercise/addを通してExercise(Log)を作成します。JSON形式で{_id: ?, username: ?, description: ?, duration: ?, date: ?}を表示します。
+4. GET [project_url]/api/exercise/log?userId=yourUserIdで入力されたパラメータuserIdが登録した全てのExercise(Log)を表示します。
+5. 任意のパラメータfrom, to, limitを使うとその条件にあったLogを表示します。(Date format yyyy-mm-dd, limit = int)
+
+## Configuration
+```
+$ cat > .env RET
+MLAB_URI=<your_mongodb_url>
+```
+
 ### User Stories
 
 1. I can create a user by posting form data username to /api/exercise/new-user and returned will be an object with username and _id.
