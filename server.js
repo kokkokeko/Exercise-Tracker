@@ -9,8 +9,8 @@ const cors = require("cors");
 /** mongoose configuration**/
 require("dotenv").config();
 const mongoose = require("mongoose");
-const db_uri = process.env.MLAB_URI || "mongodb://localhost/exercise-track"
-mongoose.connect(db_uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const db_uri = process.env.MLAB_URI || "mongodb://localhost/exercise-track";
+mongoose.connect(db_uri, {useNewUrlParser: true, useUnifiedTopology: true});
 console.log(mongoose.connection.readyState);
 
 var Schema = mongoose.Schema;
