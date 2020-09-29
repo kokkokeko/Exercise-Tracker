@@ -16,7 +16,7 @@
 		"dotenv": "^8.2.0"
 	},
 	"engines": {
-		"node": "^7.10.00"
+		"node": "^12.13.0"
 	},
 	"repository": {
 		"url": "https://gomix.com/#!/project/welcome-project"
